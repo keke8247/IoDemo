@@ -30,19 +30,22 @@ public class ServerHandler implements Runnable{
 
         try {
             //创建选择器
-            selector = Selector.open();
+            selector = Selector.open();  //Selector.open() 返回WindowsSelectorImpl 实例
 
             //打开监听通道
-            serverChannel = ServerSocketChannel.open();
+            serverChannel = ServerSocketChannel.open(); //ServerSocketChannel.open() 返回ServerSocketChannelImpl 实例
 
             //开启非阻塞模式
-            serverChannel.configureBlocking(false); //true为阻塞模式  false为非阻塞模式
+            serverChannel.configureBlocking(false); //true为阻塞模式  false为非阻塞模式 该方法线程安全
 
             //绑定端口 backlog设为1024(请求传入最大长度)
+            //serverChannel.socket() 为线程安全的，且是单例模式，感觉此方法可以进一步优化 double checking，此方法返回的是 ServerSocketAdaptor（ServerSocket适配器）
+            //bind()方法 是调用的SeverSocketChannelImpl的bind()方法。
             serverChannel.socket().bind(new InetSocketAddress(port),1024);
 
             //注册  监听连接请求 SelectionKey.OP_ACCEPT为连接请求
-            serverChannel.register(selector,SelectionKey.OP_ACCEPT);
+            //把serverChannel 注册到 Selecotr 兴趣事件为 accept
+            SelectionKey key = serverChannel.register(selector,SelectionKey.OP_ACCEPT);
 
             //标记开启服务
             started = true;
@@ -64,7 +67,9 @@ public class ServerHandler implements Runnable{
         while (started){
             try {
                 //无论是否有读写时间发生，selector每隔1秒唤醒一次。
-                selector.select(1000);
+                int readySelectionKeys = selector.select(1000);
+
+                if(readySelectionKeys == 0) continue;;
 
                 Set<SelectionKey> keys = selector.selectedKeys();
 
