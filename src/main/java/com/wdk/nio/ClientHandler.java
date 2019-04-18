@@ -105,10 +105,12 @@ public class ClientHandler implements Runnable{
     private void handleInput(SelectionKey key) throws IOException{
         if(key.isValid()){
             SocketChannel sc = (SocketChannel) key.channel();
-
+            //key.isConnectable() =true ,说明服务端已经返回ACK应答消息. 这时候需要对连接结果进行判断.
             if(key.isConnectable()){
-                //判断是否连接成功
-                if(sc.finishConnect());
+                //finishConnect() = true 表示连接成功
+                if(sc.finishConnect()){
+                    sc.register(selector,SelectionKey.OP_READ);
+                }
                 else System.exit(1); //连接失败 退出进程
             }
             //读消息
@@ -155,7 +157,6 @@ public class ClientHandler implements Runnable{
     }
 
     public void sendMsg(String msg) throws Exception{
-
         doWrite(socketChannel, msg);
     }
 }
