@@ -44,7 +44,7 @@ public class ServerHandler implements Runnable{
             serverChannel.socket().bind(new InetSocketAddress(port),1024);
 
             //注册  监听连接请求 SelectionKey.OP_ACCEPT为连接请求
-            //把serverChannel 注册到 Selecotr 兴趣事件为 accept
+            //把serverChannel 注册到 Reactor线程的Selecotr上,监听 请求连接事件
             SelectionKey key = serverChannel.register(selector,SelectionKey.OP_ACCEPT);
 
             //标记开启服务
@@ -114,6 +114,7 @@ public class ServerHandler implements Runnable{
             if(key.isAcceptable()){
                 ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
 
+                //接收客户端的请求并创建socketChannel实例.
                 //通过ServerSocketChannel的accept创建SocketChannel实例
                 //完成该操作意味着完成TCP请求的三次握手，TCP物理链路成功建立
                 SocketChannel socketChannel = ssc.accept();
@@ -122,6 +123,7 @@ public class ServerHandler implements Runnable{
                 socketChannel.configureBlocking(false);
 
                 //连接建立 注册为读
+                //将新接入的客户端注册到Reactor线程的多路复用器上,监听读操作.读取客户端发送过来的网络消息
                 socketChannel.register(selector,SelectionKey.OP_READ);
             }
 
@@ -158,7 +160,7 @@ public class ServerHandler implements Runnable{
                     }
                     //发送应答消息
                     doWrite(socketChannel,result);
-                }else if(readBytes<0){//没有读取到字节 忽略
+                }else if(readBytes<0){//链路已关闭 关闭通道 释放资源
                     key.cancel();
                     socketChannel.close();
                 }

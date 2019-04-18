@@ -72,6 +72,5 @@ public class ServerHandler implements Runnable{
                 socket = null;
             }
         }
-
     }
 }

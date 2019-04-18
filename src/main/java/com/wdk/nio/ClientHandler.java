@@ -41,10 +41,15 @@ public class ClientHandler implements Runnable{
     }
 
     private void doConnect() throws IOException{
+
+        //如果直接连接成功 则注册到多路复用器上,发送请求消息 读 应答
         if(socketChannel.connect(new InetSocketAddress(host,port))){
-
+            //注册 读请求
+            socketChannel.register(selector, SelectionKey.OP_READ);
         }else{
-
+            //没有直接连接成功 说明服务端没有返回TCP握手的应答消息,但这并不代表连接失败.
+            //需要将channel注册到到selector 注册OP_CONNECT, 当服务端返回TCP syn-ack消息后
+            //Selector就能轮训到这个SocketChannel处于连接就绪状态.
             //注册 连接请求
             socketChannel.register(selector, SelectionKey.OP_CONNECT);
         }
@@ -100,9 +105,11 @@ public class ClientHandler implements Runnable{
     private void handleInput(SelectionKey key) throws IOException{
         if(key.isValid()){
             SocketChannel sc = (SocketChannel) key.channel();
+
             if(key.isConnectable()){
+                //判断是否连接成功
                 if(sc.finishConnect());
-                else System.exit(1);
+                else System.exit(1); //连接失败 退出进程
             }
             //读消息
             if(key.isReadable()){
@@ -148,8 +155,7 @@ public class ClientHandler implements Runnable{
     }
 
     public void sendMsg(String msg) throws Exception{
-        //注册 读请求
-        socketChannel.register(selector, SelectionKey.OP_READ);
+
         doWrite(socketChannel, msg);
     }
 }
